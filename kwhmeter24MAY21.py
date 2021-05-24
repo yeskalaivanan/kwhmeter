@@ -96,8 +96,8 @@ def update_record():
 
 def add_kwh(id,kwh):
     Array_Meter_Kwh[int(id)] = kwh
-    if(previous_kwh[i]==0):
-        previous_kwh[int[id]]=kwh
+    if(previous_kwh[int(id)]==0):
+        previous_kwh[int(id)]=kwh
     
 while True:
   
