@@ -28,7 +28,7 @@ except Exception as e:
 
 for i in range(30):
     Array_Meter_Kwh.insert(i,0)
-    previous_kwh.inser(i,0)
+    previous_kwh.insert(i,0)
     difference_kwh.insert(i,0)
 
 def different_kwh():
