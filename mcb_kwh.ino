@@ -95,7 +95,7 @@ void loop()
           updateEEPROM(i);//Write/Update values in EEPROM 
         }
         //
-        LCD_Update(i);
+        //LCD_Update(i);
         Print_Serial(i);
       } 
       //LCD_Update(0);
