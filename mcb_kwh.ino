@@ -39,9 +39,7 @@ void setup()
   lcd.clear();
   lcd.print(DisplayString);
   
-  pinMode(ledPin, OUTPUT);
-  //pinMode(interruptPin, INPUT_PULLUP);  
-  //attachInterrupt(digitalPinToInterrupt(interruptPin), blink, CHANGE);
+  pinMode(ledPin, OUTPUT);  
   Serial.begin(9600);//Serial start with 9600
 
   for(i=0;i<=(total_meters-1);i++)
@@ -51,56 +49,44 @@ void setup()
     kwh_whole[i] = readIntFromEEPROM(kwh_whole_address[i]);
     calculation(i);
     delay(100);
-  } 
-  //LCD_Update(1);
+  }   
 }
 
 void loop() 
 {
-
-  //i=0;
-  
-
-  /*while (Serial.available() > 0) 
-  {
-    // look for the next valid integer in the incoming serial stream:
-    int serial_read_data = Serial.parseInt();    
-    Print_Serial(serial_read_data);//print value in serial       
-  }*/
-    
+    //Starting to counting pulses
     for(i=0;i<=(total_meters-1);i++)
     {
+      //Read pin status
       value[i] = digitalRead(myPins[i]);
       
-  
       if (value[i] == 1 && Previous_state[i] == 0)
       {
         intterupt_occured[i] = 1;
         count[i]++;
         Energy_Pulse[i]++;  
         Previous_state[i] = 1;    
-      }
+      }//if (value[i] == 1 && Previous_state[i] == 0)
+      
       if(value[i] == 0)
       {
         Previous_state[i] = 0;
-      }
+      }//if(value[i] == 0)
       ///////////////////////////////////////
       if(intterupt_occured[i] == 1)
       {
         intterupt_occured[i] = 0;        
         calculation(i);//kwh calculation
+        //Backup for every 100 pulse/ 0.1 Kwh
         if(Energy_Pulse[i] >= 100)
         {
           Energy_Pulse[i] = 0;
           updateEEPROM(i);//Write/Update values in EEPROM 
-        }
-        //
+        }//if(Energy_Pulse[i] >= 100)        
         //LCD_Update(i);
         Print_Serial(i);
-      } 
-      //LCD_Update(0);
-      //Print_Serial(0);       
-    } //for         
+      }//if(intterupt_occured[i] == 1)           
+    } //for(i=0;i<=(total_meters-1);i++)         
 }//void
 void LCD_Update(int No)
 {
@@ -108,33 +94,17 @@ void LCD_Update(int No)
   lcd.setCursor(0, 0); 
   lcd.print("Pulse : ");    
   lcd.print(count[No]);
-
-//  Energy = count / 1000.0;
-  
   lcd.setCursor(0, 1); 
   lcd.print("Energy : ");    
   lcd.print(kwh_total[No]);
-}
-/*void blink() {
-  state = !state;
-  if (state == 1 && Previous_state == 0)
-  {
-    intterupt_occured = 1;
-    count++;
-    Energy_Pulse++;      
-  }
-  if(state == 0)
-  {
-    Previous_state = 0;
-  }
-}*/
+}//void LCD_Update(int No)
 
 void Print_Serial(int No)
 {
   Serial.print(No);
   Serial.print(",");
   Serial.println(kwh_total[No]);
-}
+}//void Print_Serial(int No)
 void calculation(int No)
 {
   if(count[No] >= 1000)
@@ -146,33 +116,31 @@ void calculation(int No)
   
   kwh_resolution[No] = count[No] / 1000.0;  
   kwh_total[No] = kwh_whole[No] + kwh_resolution[No];
-
-  //Energy_Difference = Energy_Previous - kwh_resolution
-
-  //Energy_Update = kwh_resolution;
-}
+}//void calculation(int No)
 
 void updateEEPROM(int No)
 {  
     writeIntIntoEEPROM(count_address[No],count[No]);
     writeIntIntoEEPROM(kwh_whole_address[No],kwh_whole[No]);
-}
+}//void updateEEPROM(int No)
 
 void writeIntIntoEEPROM(int address, int number)
 { 
   EEPROM.write(address, number >> 8);
   EEPROM.write(address + 1, number & 0xFF);
 }
+
 /*int readIntFromEEPROM(int address)
 {
   byte byte1 = EEPROM.read(address);
   byte byte2 = EEPROM.read(address + 1);
   return (byte1 << 8) + byte2;
 }*/
+
 int readIntFromEEPROM(int address)
 {
   return (EEPROM.read(address) << 8) + EEPROM.read(address + 1);
-}
+}//int readIntFromEEPROM(int address)
 
 void writeLongIntoEEPROM(int address, long number)
 { 
@@ -180,7 +148,7 @@ void writeLongIntoEEPROM(int address, long number)
   EEPROM.write(address + 1, (number >> 16) & 0xFF);
   EEPROM.write(address + 2, (number >> 8) & 0xFF);
   EEPROM.write(address + 3, number & 0xFF);
-}
+}//void writeLongIntoEEPROM(int address, long number)
 
 long readLongFromEEPROM(int address)
 {
@@ -188,4 +156,4 @@ long readLongFromEEPROM(int address)
          ((long)EEPROM.read(address + 1) << 16) +
          ((long)EEPROM.read(address + 2) << 8) +
          (long)EEPROM.read(address + 3);
-}
+}//long readLongFromEEPROM(int address)
