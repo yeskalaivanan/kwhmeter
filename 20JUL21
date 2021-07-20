@@ -1,0 +1,272 @@
+from os import write
+import  smtplib, ssl
+from email import encoders
+from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+from pathlib import Path
+import serial
+import mysql.connector
+import sys
+import csv
+import time
+from datetime import datetime,timedelta
+
+
+right_sensor=0
+left_sensor=0
+spin=0
+
+Array_Meter_Kwh = []
+previous_kwh = []
+previous_day_kwh = []
+difference_kwh = []
+difference_day_kwh = []
+meter_serial_no = []
+Meter_starting_address = 501
+
+now = datetime.now()
+
+old_day = now.day
+old_hour = now.hour
+old_minute = now.minute
+
+try:    
+    ser = serial.Serial("/dev/ttyUSB0", 9600)    
+    #ser = serial.Serial("COM12", 9600)
+    print("Serial Port Connected")
+except Exception as e:
+    print("Serial port is not available, Kindly check the connected serial device") 
+    print("Oops!",e.__class__,"occurred",now) 
+    sys.exit()
+
+for i in range(30):
+    Array_Meter_Kwh.insert(i,0)
+    previous_kwh.insert(i,0)
+    previous_day_kwh.insert(i,0)
+    difference_kwh.insert(i,0)
+    difference_day_kwh.insert(i,0)
+    meter_serial_no.insert(i,0)
+    meter_serial_no[i] = i + Meter_starting_address
+
+def different_kwh():
+    for i in range(30):           
+        difference_kwh[i]=float(Array_Meter_Kwh[i])-float(previous_kwh[i])  
+        previous_kwh[i]=Array_Meter_Kwh[i]
+    
+    try:
+        mydb = mysql.connector.connect(
+            host = "103.68.33.37",
+            user = "veplserver",
+            passwd = "Vepl@123",
+            database = "oterra",
+            auth_plugin='mysql_native_password')
+
+        mycursor = mydb.cursor()
+        for i in range(30):
+            sql = "INSERT INTO energy_kwh (MeterNo,Energy,Time) VALUES (%s,%s,%s)"
+            val= (i+Meter_starting_address,difference_kwh[i],now)
+            mycursor.execute(sql,val)
+            mydb.commit()
+        print("record Added ",now)
+    except Exception as e:
+        print("Oops!",e.__class__,"occurred",now)
+
+
+def add_record():
+    try:
+        mydb = mysql.connector.connect(
+            host = "103.68.33.37",
+            user = "veplserver",
+            passwd = "Vepl@123",
+            database = "oterra",
+            auth_plugin='mysql_native_password')
+
+        mycursor = mydb.cursor()
+        for i in range(30):
+            sql = "INSERT INTO energy (MeterNo,Energy,Time) VALUES (%s,%s,%s)"
+            val= (i+Meter_starting_address,Array_Meter_Kwh[i],now)
+            mycursor.execute(sql,val)
+            mydb.commit()
+        print("record Added ",now)
+    except Exception as e:
+        print("Oops!",e.__class__,"occurred",now)
+
+def update_record():
+    try:
+        mydb = mysql.connector.connect(
+            host = "103.68.33.37",
+            user = "veplserver",
+            passwd = "Vepl@123",
+            database = "oterra",
+            auth_plugin='mysql_native_password')
+
+        mycursor = mydb.cursor()
+        for i in range(30):
+            sql = "UPDATE rooms SET Energy=%s,Time=%s WHERE MeterNo = %s"
+            val= (Array_Meter_Kwh[i],now,i+Meter_starting_address)
+            print(Array_Meter_Kwh[i],now,i+Meter_starting_address)            
+            mycursor.execute(sql,val)
+            mydb.commit()
+        print("record updated ",now)
+    except Exception as e:
+        print("Oops!",e.__class__,"occurred",now)
+
+def add_kwh(id,kwh):
+    Array_Meter_Kwh[int(id)] = kwh
+    if(previous_kwh[i]==0):
+        previous_kwh[int(id)]=kwh
+
+def update_csv_file():
+    # name of csv file
+    global path_filename
+    global mode
+
+
+    path_filename = Path('databackup/' + datetime.now().strftime("%Y%m%d") + '.csv')
+
+    if not path_filename.exists():
+        print("Oops, file doesn't exist!")
+        mode = 'a+'
+        
+    else:
+        print("Yay, the file exists!")
+        mode = 'a'
+        #create_and_write_file('a')
+        
+    create_and_write_file(mode)    
+        
+def create_and_write_file(mode):
+
+    print(path_filename.name)
+
+    #with open(filename, 'w') as csvfile:
+    with open(path_filename, mode) as csvfile:
+        # creating a csv writer object
+        csvwriter = csv.writer(csvfile)
+
+        now = time.strftime('%d-%m-%Y %H:%M:%S')   
+
+        #if(mode == 'w'):
+        #    csvwriter.writerow(meter_serial_no)
+        #csvwriter.writerow([now,previous_day_kwh[0],previous_day_kwh[1],previous_day_kwh[2],previous_day_kwh[3],previous_day_kwh[4],previous_day_kwh[5],previous_day_kwh[6],previous_day_kwh[7],previous_day_kwh[8],previous_day_kwh[9],previous_day_kwh[10],
+        #                previous_day_kwh[11],previous_day_kwh[12],previous_day_kwh[13],previous_day_kwh[14],previous_day_kwh[15],previous_day_kwh[16],previous_day_kwh[17],previous_day_kwh[18],previous_day_kwh[19],previous_day_kwh[20],
+        #                previous_day_kwh[21],previous_day_kwh[22],previous_day_kwh[23],previous_day_kwh[24],previous_day_kwh[25],previous_day_kwh[26],previous_day_kwh[27],previous_day_kwh[28],previous_day_kwh[29]])
+
+        csvwriter.writerow([now,Array_Meter_Kwh[0],Array_Meter_Kwh[1],Array_Meter_Kwh[2],Array_Meter_Kwh[3],Array_Meter_Kwh[4],Array_Meter_Kwh[5],Array_Meter_Kwh[6],Array_Meter_Kwh[7],Array_Meter_Kwh[8],Array_Meter_Kwh[9],Array_Meter_Kwh[10],
+                        Array_Meter_Kwh[11],Array_Meter_Kwh[12],Array_Meter_Kwh[13],Array_Meter_Kwh[14],Array_Meter_Kwh[15],Array_Meter_Kwh[16],Array_Meter_Kwh[17],Array_Meter_Kwh[18],Array_Meter_Kwh[19],Array_Meter_Kwh[20],
+                        Array_Meter_Kwh[21],Array_Meter_Kwh[22],Array_Meter_Kwh[23],Array_Meter_Kwh[24],Array_Meter_Kwh[25],Array_Meter_Kwh[26],Array_Meter_Kwh[27],Array_Meter_Kwh[28],Array_Meter_Kwh[29]])
+
+        #for i in range(30):                               
+        #    difference_day_kwh[i] = float(Array_Meter_Kwh[int(i)]) - float(previous_day_kwh[int(i)])
+        #    previous_day_kwh[i]=Array_Meter_Kwh[i]
+
+        #csvwriter.writerow([now,difference_kwh[0],difference_kwh[1],difference_kwh[2],difference_kwh[3],difference_kwh[4],difference_kwh[5],difference_kwh[6],difference_kwh[7],difference_kwh[8],difference_kwh[9],difference_kwh[10],
+        #                difference_kwh[11],difference_kwh[12],difference_kwh[13],difference_kwh[14],difference_kwh[15],difference_kwh[16],difference_kwh[17],difference_kwh[18],difference_kwh[19],difference_kwh[20],
+        #                difference_kwh[21],difference_kwh[22],Array_Meter_Kwh[23],difference_kwh[24],difference_kwh[25],difference_kwh[26],difference_kwh[27],difference_kwh[28],difference_kwh[29]])
+
+def email_send_fuction():
+    
+    yesterday = datetime.now() - timedelta(1)
+    
+    subject = "An email with attachment from Python"
+    body = "This is an email with attachment sent from Python"
+    sender_email = "veplems@gmail.com"
+    receiver_email = "kalaivanan@velankanigroup.com"
+    password = '123@smartmeter'
+
+    # Create a multipart message and set headers
+    message = MIMEMultipart()
+    message["From"] = sender_email
+    message["To"] = receiver_email
+    message["Subject"] = subject
+    message["Bcc"] = receiver_email  # Recommended for mass emails
+
+    # Add body to email
+    message.attach(MIMEText(body, "plain"))
+
+    path_filename = Path('databackup/' + yesterday.strftime("%Y%m%d") + '.csv')
+    filename = path_filename #"raw_data.txt"  # In same directory as script
+
+    # Open PDF file in binary mode
+    with open(filename, "rb") as attachment:
+        # Add file as application/octet-stream
+        # Email client can usually download this automatically as attachment
+        part = MIMEBase("application", "octet-stream")
+        part.set_payload(attachment.read())
+
+    # Encode file in ASCII characters to send by email    
+    encoders.encode_base64(part)
+
+    # Add header as key/value pair to attachment part
+    part.add_header(
+        "Content-Disposition",
+        f"attachment; filename= {filename}",
+    )    
+
+    # Add attachment to message and convert message to string
+    message.attach(part)
+    text = message.as_string()
+
+    # Log in to server using secure context and send email
+    context = ssl.create_default_context()
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+        server.login(sender_email, password)
+        server.sendmail(sender_email, receiver_email, text)
+    print("Mail Sent succesfully")
+
+
+def date_and_time_update():
+
+    global new_day
+    global new_hour
+    global new_minute
+    global now
+
+    now = datetime.now()
+    new_day = now.day
+    new_hour = now.hour
+    new_minute = now.minute
+
+while True:
+  
+    date_and_time_update()
+
+    ser.flushInput()
+    ser.flushOutput()
+
+    cc=str(ser.readline())
+
+    print("Serial Received : ",cc,now)
+
+    total =(cc[2:][:-5])
+    seperated = total.split(',')
+    
+    try:
+        Meter_ID = (seperated[0])
+        Meter_Kwh = (seperated[1])
+        add_kwh(Meter_ID,Meter_Kwh)
+        print("Meter ID = ",int(Meter_ID)+Meter_starting_address,"Kwh = ",Meter_Kwh) 
+    except Exception as e:
+        print("Oops!",e.__class__,"occurred",now)
+
+    if(old_minute != new_minute):
+        old_minute = new_minute
+        update_csv_file()
+        email_send_fuction()
+        #update_record()
+        #update_csv_file()
+    if(new_hour != old_hour):          
+        #add_record()
+        #different_kwh()
+        #update_csv_file()
+        #email_send_fuction()
+        old_hour = new_hour
+
+    if(new_day != old_day):  
+        old_day = new_day
+    
+    
+    
+  
